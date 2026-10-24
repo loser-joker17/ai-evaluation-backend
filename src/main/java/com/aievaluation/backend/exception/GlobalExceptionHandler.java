@@ -51,4 +51,9 @@ public class GlobalExceptionHandler {
                 request.getRequestURI());
         return ResponseEntity.status(status).body(body);
     }
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(org.springframework.dao.DataIntegrityViolationException ex,
+                                                        HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, "This conflicts with existing data", request);
+    }
 }
