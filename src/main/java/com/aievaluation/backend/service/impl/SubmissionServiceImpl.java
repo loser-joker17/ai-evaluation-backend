@@ -3,11 +3,17 @@ package com.aievaluation.backend.service.impl;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+import com.aievaluation.backend.dto.response.EvaluationResultResponse;
 import com.aievaluation.backend.entity.Evaluation;
 import com.aievaluation.backend.enums.EvaluationStatus;
 import com.aievaluation.backend.exception.ConflictException;
 import com.aievaluation.backend.mapper.EvaluationMapper;
+import com.aievaluation.backend.mapper.EvaluationResultMapper;
 import com.aievaluation.backend.repository.EvaluationRepository;
 import com.aievaluation.backend.service.EvaluationService;
 import org.springframework.data.domain.Page;
@@ -46,10 +52,12 @@ public class SubmissionServiceImpl implements SubmissionService {
     private final EvaluationService evaluationService;
     private final EvaluationRepository evaluationRepository;
     private final EvaluationMapper evaluationMapper;
+    private final EvaluationResultMapper evaluationResultMapper;
 
     public SubmissionServiceImpl(SubmissionRepository submissionRepository, UserRepository userRepository,
                                  QuotaService quotaService, SubmissionMapper submissionMapper,EvaluationMapper evaluationMapper,
-                                  EvaluationRepository evaluationRepository, EvaluationService evaluationService) {
+                                  EvaluationRepository evaluationRepository, EvaluationService evaluationService,
+                                 EvaluationResultMapper evaluationResultMapper) {
         this.submissionRepository = submissionRepository;
         this.userRepository = userRepository;
         this.quotaService = quotaService;
@@ -57,6 +65,7 @@ public class SubmissionServiceImpl implements SubmissionService {
         this.evaluationRepository = evaluationRepository;
         this.evaluationService = evaluationService;
         this.evaluationMapper = evaluationMapper;
+        this.evaluationResultMapper = evaluationResultMapper;
     }
 
     @Override
@@ -119,6 +128,23 @@ public class SubmissionServiceImpl implements SubmissionService {
 
     @Override
     @Transactional(readOnly = true)
+    public EvaluationResultResponse getResult(UUID userId, UUID submissionId) {
+        Submission submission = findOwned(userId, submissionId);
+        Evaluation latest = evaluationRepository.findFirstBySubmissionIdOrderByAttemptNoDesc(submissionId)
+                .orElseThrow(() -> new ResourceNotFoundException("No evaluation for this submission"));
+
+        EvaluationStatus status = latest.getStatus();
+        if (status == EvaluationStatus.COMPLETED || status == EvaluationStatus.REJECTED) {
+            return evaluationResultMapper.toResult(latest, submission);
+        }
+        if (status == EvaluationStatus.FAILED) {
+            throw new ConflictException("This answer could not be evaluated. Please submit it again later.");
+        }
+        throw new ConflictException("This answer is still being evaluated. Check again in a few minutes.");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public PageResponse<SubmissionSummaryResponse> listForUser(UUID userId, int page, int size) {
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
@@ -126,9 +152,30 @@ public class SubmissionServiceImpl implements SubmissionService {
                 userId, PageRequest.of(safePage, safeSize));
 
         PageResponse<SubmissionSummaryResponse> response = new PageResponse<>();
-        for (Submission submission : result.getContent()) {
-            response.getContent().add(submissionMapper.toSummary(submission));
+        Map<UUID, Evaluation> latestBySubmission = new HashMap<>();
+        if (!result.getContent().isEmpty()) {
+            List<UUID> ids = new ArrayList<>();
+            for (Submission submission : result.getContent()) {
+                ids.add(submission.getId());
+            }
+            for (Evaluation evaluation : evaluationRepository.findLatestForSubmissions(ids)) {
+                latestBySubmission.put(evaluation.getSubmission().getId(), evaluation);
+            }
         }
+
+        for (Submission submission : result.getContent()) {
+            SubmissionSummaryResponse summary = submissionMapper.toSummary(submission);
+            Evaluation latest = latestBySubmission.get(submission.getId());
+            if (latest != null) {
+                summary.setEvaluationStatus(latest.getStatus().name());
+                if (latest.getStatus() == EvaluationStatus.COMPLETED) {
+                    summary.setTotalScore(latest.getTotalScore());
+                }
+                summary.setEvaluatedAt(latest.getFinishedAt());
+            }
+            response.getContent().add(summary);
+        }
+
         response.setPage(result.getNumber());
         response.setSize(result.getSize());
         response.setTotalElements(result.getTotalElements());

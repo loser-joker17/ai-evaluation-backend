@@ -18,6 +18,10 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  task:
+    scheduling:
+      pool:
+        size: 2   # dispatcher and reconciler each get a thread; a slow GET /jobs never delays dispatch
 
 server:
   port: ${SERVER_PORT:8081}
@@ -54,4 +58,4 @@ app:
     connect-timeout: 5s
     read-timeout: 30s
     dispatch-interval: 5s
-    dispatch-batch-size: 5
+    reconcile-interval: 60s

@@ -2,6 +2,7 @@ package com.aievaluation.backend.dto.response;
 
 import java.time.Instant;
 import java.util.UUID;
+import java.math.BigDecimal;
 
 /** One row in the history list: no full answer text, just a preview of the question. */
 public class SubmissionSummaryResponse {
@@ -14,6 +15,18 @@ public class SubmissionSummaryResponse {
     private String questionPreview;
     private String status;
     private Instant createdAt;
+    private String evaluationStatus;   // PENDING ... COMPLETED / REJECTED / FAILED; null if none
+    private BigDecimal totalScore;     // only when COMPLETED
+    private Instant evaluatedAt;       // finished_at of the latest attempt
+
+    public String getEvaluationStatus() { return evaluationStatus; }
+    public void setEvaluationStatus(String evaluationStatus) { this.evaluationStatus = evaluationStatus; }
+
+    public BigDecimal getTotalScore() { return totalScore; }
+    public void setTotalScore(BigDecimal totalScore) { this.totalScore = totalScore; }
+
+    public Instant getEvaluatedAt() { return evaluatedAt; }
+    public void setEvaluatedAt(Instant evaluatedAt) { this.evaluatedAt = evaluatedAt; }
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }

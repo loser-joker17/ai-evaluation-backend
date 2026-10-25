@@ -2,6 +2,7 @@ package com.aievaluation.backend.controller;
 
 import java.util.UUID;
 
+import com.aievaluation.backend.dto.response.EvaluationResultResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -57,5 +58,9 @@ public class SubmissionController {
     public ResponseEntity<Void> delete(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         submissionService.delete(CurrentUser.id(jwt), id);
         return ResponseEntity.noContent().build();
+    }
+    @GetMapping("/{id}/result")
+    public EvaluationResultResponse result(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return submissionService.getResult(CurrentUser.id(jwt), id);
     }
 }

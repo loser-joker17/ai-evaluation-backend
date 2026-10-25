@@ -98,7 +98,7 @@ public class EvaluationDispatchServiceImpl implements EvaluationDispatchService 
     }
 
     private void recordOutcome(UUID evaluationId, DispatchOutcome outcome) {
-        Optional<Evaluation> found = evaluationRepository.findById(evaluationId);
+        Optional<Evaluation> found = evaluationRepository.findByIdForUpdate(evaluationId);
         // Only change rows still PENDING. A very fast job's result (step 6) may already be in.
         if (found.isEmpty() || found.get().getStatus() != EvaluationStatus.PENDING) {
             return;

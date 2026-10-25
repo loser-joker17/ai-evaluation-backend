@@ -95,6 +95,12 @@ public class Evaluation {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name = "lost_count", nullable = false)
+    private Integer lostCount = 0;
+
+    public Integer getLostCount() { return lostCount; }
+    public void setLostCount(Integer lostCount) { this.lostCount = lostCount; }
+
     @PrePersist
     void onCreate() {
         Instant now = Instant.now();
