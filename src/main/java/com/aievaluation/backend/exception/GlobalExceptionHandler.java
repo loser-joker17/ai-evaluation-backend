@@ -56,4 +56,10 @@ public class GlobalExceptionHandler {
                                                         HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, "This conflicts with existing data", request);
     }
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Invalid value for '" + ex.getName() + "'", request);
+    }
 }
