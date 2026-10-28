@@ -3,6 +3,7 @@ package com.aievaluation.backend.service.impl;
 import java.time.Instant;
 import java.util.Optional;
 
+import com.aievaluation.backend.security.LoginRateLimiter;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,23 +29,27 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
+    private final LoginRateLimiter loginRateLimiter;
 
     // Checked against when the email is unknown, so a wrong email takes as long as a wrong
     // password and response time doesn't reveal which emails have accounts.
     private final String dummyPasswordHash;
 
     public AuthServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                           JwtTokenProvider jwtTokenProvider, RefreshTokenService refreshTokenService) {
+                           JwtTokenProvider jwtTokenProvider, RefreshTokenService refreshTokenService,
+                           LoginRateLimiter loginRateLimiter) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.refreshTokenService = refreshTokenService;
         this.dummyPasswordHash = passwordEncoder.encode("timing-equaliser-not-a-real-password");
+        this.loginRateLimiter = loginRateLimiter;
     }
 
     @Override
     @Transactional
-    public AuthResult register(RegisterRequest request) {
+    public AuthResult register(RegisterRequest request, String clientIp) {
+        loginRateLimiter.checkAndRecordRegistration(clientIp);
         String email = normalizeEmail(request.getEmail());
         if (userRepository.existsByEmail(email)) {
             throw new ConflictException("An account with this email already exists");
@@ -62,20 +67,25 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public AuthResult login(LoginRequest request) {
+    public AuthResult login(LoginRequest request, String clientIp) {
         String email = normalizeEmail(request.getEmail());
-        Optional<User> found = userRepository.findByEmail(email);
+        // Before BCrypt: a blocked caller gets 429 without costing a password check.
+        loginRateLimiter.checkLogin(email, clientIp);
 
+        Optional<User> found = userRepository.findByEmail(email);
         if (found.isEmpty() || found.get().getPasswordHash() == null) {
             // Unknown email, or a Google-only account: same work, same message.
             passwordEncoder.matches(request.getPassword(), dummyPasswordHash);
+            loginRateLimiter.recordLoginFailure(email, clientIp);
             throw new UnauthorizedException(INVALID_CREDENTIALS);
         }
 
         User user = found.get();
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            loginRateLimiter.recordLoginFailure(email, clientIp);
             throw new UnauthorizedException(INVALID_CREDENTIALS);
         }
+        loginRateLimiter.recordLoginSuccess(email);
         if (!user.isEnabled()) {
             throw new ForbiddenException("This account is disabled");
         }

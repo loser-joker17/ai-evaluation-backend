@@ -44,6 +44,8 @@ public class SubmissionServiceImpl implements SubmissionService {
 
     private static final int MAX_PAGE_SIZE = 50;
     private static final int MIN_QUESTION_LENGTH = 5;
+    // Attempt 1, the automatic retry, then up to 2 retries by the student.
+    private static final int MAX_ATTEMPTS = 4;
 
     private final SubmissionRepository submissionRepository;
     private final UserRepository userRepository;
@@ -138,8 +140,7 @@ public class SubmissionServiceImpl implements SubmissionService {
             return evaluationResultMapper.toResult(latest, submission);
         }
         if (status == EvaluationStatus.FAILED) {
-            throw new ConflictException("This answer could not be evaluated. Please submit it again later.");
-        }
+            throw new ConflictException("This answer could not be evaluated. You can retry it without using your daily quota.");        }
         throw new ConflictException("This answer is still being evaluated. Check again in a few minutes.");
     }
 
@@ -197,5 +198,30 @@ public class SubmissionServiceImpl implements SubmissionService {
     private Submission findOwned(UUID userId, UUID submissionId) {
         return submissionRepository.findByIdAndUserId(submissionId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Submission not found"));
+    }
+    @Override
+    @Transactional
+    public SubmissionResponse retry(UUID userId, UUID submissionId) {
+        Submission submission = findOwned(userId, submissionId);
+        if (submission.getStatus() != SubmissionStatus.SUBMITTED) {
+            throw new ConflictException("Only submitted answers can be evaluated again");
+        }
+        Evaluation latest = evaluationRepository.findFirstBySubmissionIdOrderByAttemptNoDesc(submissionId)
+                .orElseThrow(() -> new ResourceNotFoundException("No evaluation for this submission"));
+        if (latest.getStatus() != EvaluationStatus.FAILED) {
+            throw new ConflictException("Only a failed evaluation can be retried");
+        }
+        if (latest.getAttemptNo() >= MAX_ATTEMPTS) {
+            throw new ConflictException("This answer could not be evaluated after several attempts. Please try again tomorrow.");
+        }
+
+        // No quota: the failure was on our side.
+        Evaluation attempt = evaluationService.createAttempt(submission);
+        // Flush now, so a double click fails here on UNIQUE (submission_id, attempt_no) and returns 409.
+        evaluationRepository.flush();
+
+        SubmissionResponse response = submissionMapper.toResponse(submission);
+        response.setEvaluation(evaluationMapper.toSummary(attempt));
+        return response;
     }
 }

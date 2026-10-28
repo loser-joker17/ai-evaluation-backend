@@ -1,5 +1,5 @@
 package com.aievaluation.backend.enums;
 
 public enum SubmissionStatus {
-    DRAFT, OCR_PENDING, OCR_READY, SUBMITTED
+    DRAFT, OCR_PENDING, OCR_READY, OCR_FAILED, SUBMITTED
 }

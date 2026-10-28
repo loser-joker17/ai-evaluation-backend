@@ -9,7 +9,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @ConfigurationPropertiesScan
-@EnableScheduling
 public class AiEvaluationBackendApplication {
 
 	public static void main(String[] args) {

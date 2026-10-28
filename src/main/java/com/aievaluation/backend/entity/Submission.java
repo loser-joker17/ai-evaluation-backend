@@ -60,6 +60,16 @@ public class Submission {
     @Column(name = "word_count")
     private Integer wordCount;
 
+    @Column(name = "ocr_attempts", nullable = false)
+    private Integer ocrAttempts = 0;
+
+    @Column(name = "next_ocr_at")
+    private Instant nextOcrAt;
+
+    // Short technical reason (never contains answer text).
+    @Column(name = "ocr_error", length = 300)
+    private String ocrError;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -116,4 +126,12 @@ public class Submission {
 
     public Instant getSubmittedAt() { return submittedAt; }
     public void setSubmittedAt(Instant submittedAt) { this.submittedAt = submittedAt; }
+    public Integer getOcrAttempts() { return ocrAttempts; }
+    public void setOcrAttempts(Integer ocrAttempts) { this.ocrAttempts = ocrAttempts; }
+
+    public Instant getNextOcrAt() { return nextOcrAt; }
+    public void setNextOcrAt(Instant nextOcrAt) { this.nextOcrAt = nextOcrAt; }
+
+    public String getOcrError() { return ocrError; }
+    public void setOcrError(String ocrError) { this.ocrError = ocrError; }
 }

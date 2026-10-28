@@ -79,6 +79,11 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         }
     }
 
+    @Override
+    @Transactional
+    public int deleteExpired() {
+        return refreshTokenRepository.deleteExpiredBefore(Instant.now());
+    }
     private String generateRawToken() {
         byte[] bytes = new byte[TOKEN_BYTES];
         secureRandom.nextBytes(bytes);

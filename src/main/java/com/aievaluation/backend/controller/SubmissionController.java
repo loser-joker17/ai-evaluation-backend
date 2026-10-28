@@ -63,4 +63,8 @@ public class SubmissionController {
     public EvaluationResultResponse result(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         return submissionService.getResult(CurrentUser.id(jwt), id);
     }
+    @PostMapping("/{id}/retry")
+    public SubmissionResponse retry(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return submissionService.retry(CurrentUser.id(jwt), id);
+    }
 }

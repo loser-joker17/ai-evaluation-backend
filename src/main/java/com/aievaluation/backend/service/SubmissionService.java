@@ -18,4 +18,5 @@ public interface SubmissionService {
 
     void delete(UUID userId, UUID submissionId);
     EvaluationResultResponse getResult(UUID userId, UUID submissionId);
+    SubmissionResponse retry(UUID userId, UUID submissionId);
 }

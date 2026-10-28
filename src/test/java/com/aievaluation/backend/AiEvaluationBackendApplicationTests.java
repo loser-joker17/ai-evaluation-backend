@@ -1,13 +1,11 @@
 package com.aievaluation.backend;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class AiEvaluationBackendApplicationTests {
+class AiEvaluationBackendApplicationTests extends IntegrationTestBase {
 
+	// Starts the whole app against a fresh Postgres: Flyway V1-V5 apply and ddl-auto=validate passes.
 	@Test
 	void contextLoads() {
 	}
-
 }
