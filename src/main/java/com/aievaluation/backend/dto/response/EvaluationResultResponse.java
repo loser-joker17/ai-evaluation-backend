@@ -26,6 +26,7 @@ public class EvaluationResultResponse {
     private List<FactualFlagResponse> factualFlags = new ArrayList<>();
     private List<String> rejectionReasons = new ArrayList<>();   // only when REJECTED
     private Instant finishedAt;
+    private Boolean feedbackUseful;
 
     public UUID getEvaluationId() { return evaluationId; }
     public void setEvaluationId(UUID evaluationId) { this.evaluationId = evaluationId; }
@@ -77,4 +78,6 @@ public class EvaluationResultResponse {
 
     public Instant getFinishedAt() { return finishedAt; }
     public void setFinishedAt(Instant finishedAt) { this.finishedAt = finishedAt; }
+    public Boolean getFeedbackUseful() { return feedbackUseful; }
+    public void setFeedbackUseful(Boolean feedbackUseful) { this.feedbackUseful = feedbackUseful; }
 }

@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.aievaluation.backend.dto.request.FeedbackRequest;
 import com.aievaluation.backend.dto.response.EvaluationResultResponse;
 import com.aievaluation.backend.entity.Evaluation;
 import com.aievaluation.backend.enums.EvaluationStatus;
@@ -223,5 +224,21 @@ public class SubmissionServiceImpl implements SubmissionService {
         SubmissionResponse response = submissionMapper.toResponse(submission);
         response.setEvaluation(evaluationMapper.toSummary(attempt));
         return response;
+    }
+    @Override
+    @Transactional
+    public void giveFeedback(UUID userId, UUID submissionId, FeedbackRequest request) {
+        findOwned(userId, submissionId);
+        Evaluation latest = evaluationRepository.findFirstBySubmissionIdOrderByAttemptNoDesc(submissionId)
+                .orElseThrow(() -> new ResourceNotFoundException("No evaluation for this submission"));
+        if (latest.getStatus() != EvaluationStatus.COMPLETED) {
+            throw new ConflictException("You can rate the feedback once the answer has been evaluated.");
+        }
+
+        String comment = request.getComment() == null ? null : request.getComment().trim();
+        latest.setFeedbackUseful(request.getUseful());
+        latest.setFeedbackComment(comment == null || comment.isEmpty() ? null : comment);
+        latest.setFeedbackAt(Instant.now());
+        evaluationRepository.save(latest);
     }
 }

@@ -13,6 +13,10 @@ public class AuthProperties {
     private Duration refreshTokenTtl = Duration.ofDays(14);
     private boolean cookieSecure;
     private String cookieSameSite = "Strict";
+    private String googleClientId = "";
+
+    public String getGoogleClientId() { return googleClientId; }
+    public void setGoogleClientId(String googleClientId) { this.googleClientId = googleClientId; }
 
     public String getJwtSecret() { return jwtSecret; }
     public void setJwtSecret(String jwtSecret) { this.jwtSecret = jwtSecret; }

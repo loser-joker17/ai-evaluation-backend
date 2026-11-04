@@ -1,5 +1,6 @@
 package com.aievaluation.backend.controller;
 
+import com.aievaluation.backend.dto.request.GoogleLoginRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -68,5 +69,13 @@ public class AuthController {
         return ResponseEntity.noContent()
                 .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.clear())
                 .build();
+    }
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> google(@Valid @RequestBody GoogleLoginRequest request,
+                                               HttpServletRequest httpRequest) {
+        AuthResult result = authService.loginWithGoogle(request, httpRequest.getRemoteAddr());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.create(result.getRefreshToken()))
+                .body(authMapper.toResponse(result));
     }
 }

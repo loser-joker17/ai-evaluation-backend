@@ -2,7 +2,7 @@ spring:
   application:
     name: ai-evaluation-backend
   config:
-    import: ""
+    import: optional:file:.env[.properties]
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -58,6 +58,7 @@ app:
     cookie-secure: true
     cookie-same-site: Strict
     token-cleanup-cron: ${TOKEN_CLEANUP_CRON:0 30 3 * * *}
+    google-client-id: ${GOOGLE_CLIENT_ID:}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
   quota:

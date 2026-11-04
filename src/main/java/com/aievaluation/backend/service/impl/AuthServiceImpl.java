@@ -3,10 +3,13 @@ package com.aievaluation.backend.service.impl;
 import java.time.Instant;
 import java.util.Optional;
 
+import com.aievaluation.backend.dto.request.GoogleLoginRequest;
 import com.aievaluation.backend.security.LoginRateLimiter;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.aievaluation.backend.security.GoogleIdentity;
+import com.aievaluation.backend.security.GoogleTokenVerifier;
 
 import com.aievaluation.backend.dto.request.LoginRequest;
 import com.aievaluation.backend.dto.request.RegisterRequest;
@@ -30,6 +33,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
     private final LoginRateLimiter loginRateLimiter;
+    private final GoogleTokenVerifier googleTokenVerifier;
 
     // Checked against when the email is unknown, so a wrong email takes as long as a wrong
     // password and response time doesn't reveal which emails have accounts.
@@ -37,13 +41,14 @@ public class AuthServiceImpl implements AuthService {
 
     public AuthServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder,
                            JwtTokenProvider jwtTokenProvider, RefreshTokenService refreshTokenService,
-                           LoginRateLimiter loginRateLimiter) {
+                           LoginRateLimiter loginRateLimiter, GoogleTokenVerifier googleTokenVerifier) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.refreshTokenService = refreshTokenService;
         this.dummyPasswordHash = passwordEncoder.encode("timing-equaliser-not-a-real-password");
         this.loginRateLimiter = loginRateLimiter;
+        this.googleTokenVerifier = googleTokenVerifier;
     }
 
     @Override
@@ -116,6 +121,42 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
+    @Override
+    @Transactional
+    public AuthResult loginWithGoogle(GoogleLoginRequest request, String clientIp) {
+        GoogleIdentity google = googleTokenVerifier.verify(request.getCredential());
+        if (!google.isEmailVerified() || google.getEmail() == null) {
+            throw new UnauthorizedException("Your Google account's email is not verified.");
+        }
+        String email = normalizeEmail(google.getEmail());
+
+        // Returning Google user, else an existing email+password account with the same
+        // verified email (linked, so the student keeps their history), else a new account.
+        User user = userRepository.findByGoogleSub(google.getSubject())
+                .orElseGet(() -> userRepository.findByEmail(email).orElse(null));
+        if (user == null) {
+            loginRateLimiter.checkAndRecordRegistration(clientIp);
+            user = new User();
+            user.setEmail(email);
+            user.setName(displayName(google.getName(), email));
+        } else if (user.getGoogleSub() != null && !user.getGoogleSub().equals(google.getSubject())) {
+            throw new ConflictException("This email is linked to a different Google account.");
+        }
+        if (!user.isEnabled()) {
+            throw new ForbiddenException("This account is disabled");
+        }
+
+        user.setGoogleSub(google.getSubject());
+        user.setEmailVerified(true);
+        user.setLastLoginAt(Instant.now());
+        userRepository.save(user);
+        return buildResult(user);
+    }
+
+    private String displayName(String name, String email) {
+        String value = (name == null || name.isBlank()) ? email.substring(0, email.indexOf('@')) : name.trim();
+        return value.length() > 100 ? value.substring(0, 100) : value;
+    }
     private AuthResult buildResult(User user) {
         String accessToken = jwtTokenProvider.createAccessToken(user);
         String newRefreshToken = refreshTokenService.issue(user);

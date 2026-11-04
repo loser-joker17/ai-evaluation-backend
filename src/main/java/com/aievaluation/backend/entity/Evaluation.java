@@ -98,6 +98,15 @@ public class Evaluation {
     @Column(name = "lost_count", nullable = false)
     private Integer lostCount = 0;
 
+    @Column(name = "feedback_useful")
+    private Boolean feedbackUseful;
+
+    @Column(name = "feedback_comment", length = 500)
+    private String feedbackComment;
+
+    @Column(name = "feedback_at")
+    private Instant feedbackAt;
+
     public Integer getLostCount() { return lostCount; }
     public void setLostCount(Integer lostCount) { this.lostCount = lostCount; }
 
@@ -169,4 +178,12 @@ public class Evaluation {
     public Instant getCreatedAt() { return createdAt; }
 
     public Instant getUpdatedAt() { return updatedAt; }
+    public Boolean getFeedbackUseful() { return feedbackUseful; }
+    public void setFeedbackUseful(Boolean feedbackUseful) { this.feedbackUseful = feedbackUseful; }
+
+    public String getFeedbackComment() { return feedbackComment; }
+    public void setFeedbackComment(String feedbackComment) { this.feedbackComment = feedbackComment; }
+
+    public Instant getFeedbackAt() { return feedbackAt; }
+    public void setFeedbackAt(Instant feedbackAt) { this.feedbackAt = feedbackAt; }
 }

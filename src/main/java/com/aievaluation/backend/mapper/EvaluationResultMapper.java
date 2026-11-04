@@ -57,6 +57,7 @@ public class EvaluationResultMapper {
         response.setWordCount(submission.getWordCount());
         response.setWordLimit(submission.getWordLimit());
         response.setFinishedAt(evaluation.getFinishedAt());
+        response.setFeedbackUseful(evaluation.getFeedbackUseful());
 
         JsonNode root = parse(evaluation);
         if (root == null) {
