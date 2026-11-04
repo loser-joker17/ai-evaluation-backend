@@ -1,0 +1,22 @@
+# Loaded on top of application.yaml when SPRING_PROFILES_ACTIVE=prod (the Dockerfile sets it).
+# Every value without a default must come from a real environment variable on the server.
+# ProdSafetyCheck stops startup if JWT_SECRET, EVALUATOR_INTERNAL_KEY or CORS origins are unsafe.
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 20s   # how long a restart waits for in-flight requests
+
+server:
+  shutdown: graceful                  # finish in-flight requests before stopping
+  forward-headers-strategy: native    # behind Nginx: real client IP (rate limit) and https
+
+app:
+  auth:
+    cookie-secure: true               # refresh cookie only over https, whatever the env says
+    cookie-same-site: Strict
+
+logging:
+  level:
+    root: INFO
+    com.aievaluation.backend: INFO
+    org.hibernate.SQL: WARN           # never log SQL (and its parameters) in prod
