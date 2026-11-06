@@ -14,6 +14,7 @@ app:
   auth:
     cookie-secure: true               # refresh cookie only over https, whatever the env says
     cookie-same-site: Strict
+    password-registration-enabled: ${PASSWORD_REGISTRATION_ENABLED:false}
 
 logging:
   level:

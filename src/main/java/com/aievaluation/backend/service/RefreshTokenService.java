@@ -12,4 +12,5 @@ public interface RefreshTokenService {
     void revoke(String rawToken);
     /** Deletes tokens that expired before now. Returns how many were deleted. */
     int deleteExpired();
+    void revokeAll(User user);
 }

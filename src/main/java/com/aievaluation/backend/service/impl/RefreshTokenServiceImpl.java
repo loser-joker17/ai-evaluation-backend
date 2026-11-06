@@ -99,4 +99,9 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
             throw new IllegalStateException("SHA-256 not available", e);
         }
     }
+    @Override
+    @Transactional
+    public void revokeAll(User user) {
+        refreshTokenRepository.revokeAllForUser(user.getId(), Instant.now());
+    }
 }

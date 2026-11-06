@@ -14,6 +14,10 @@ public class AuthProperties {
     private boolean cookieSecure;
     private String cookieSameSite = "Strict";
     private String googleClientId = "";
+    private boolean passwordRegistrationEnabled;
+
+    public boolean isPasswordRegistrationEnabled() { return passwordRegistrationEnabled; }
+    public void setPasswordRegistrationEnabled(boolean passwordRegistrationEnabled) { this.passwordRegistrationEnabled = passwordRegistrationEnabled; }
 
     public String getGoogleClientId() { return googleClientId; }
     public void setGoogleClientId(String googleClientId) { this.googleClientId = googleClientId; }

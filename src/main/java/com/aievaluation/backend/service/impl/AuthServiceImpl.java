@@ -3,6 +3,7 @@ package com.aievaluation.backend.service.impl;
 import java.time.Instant;
 import java.util.Optional;
 
+import com.aievaluation.backend.config.AuthProperties;
 import com.aievaluation.backend.dto.request.GoogleLoginRequest;
 import com.aievaluation.backend.security.LoginRateLimiter;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -38,10 +39,11 @@ public class AuthServiceImpl implements AuthService {
     // Checked against when the email is unknown, so a wrong email takes as long as a wrong
     // password and response time doesn't reveal which emails have accounts.
     private final String dummyPasswordHash;
+    private final AuthProperties authProperties;
 
     public AuthServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder,
                            JwtTokenProvider jwtTokenProvider, RefreshTokenService refreshTokenService,
-                           LoginRateLimiter loginRateLimiter, GoogleTokenVerifier googleTokenVerifier) {
+                           LoginRateLimiter loginRateLimiter, GoogleTokenVerifier googleTokenVerifier, AuthProperties authProperties) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
@@ -49,6 +51,7 @@ public class AuthServiceImpl implements AuthService {
         this.dummyPasswordHash = passwordEncoder.encode("timing-equaliser-not-a-real-password");
         this.loginRateLimiter = loginRateLimiter;
         this.googleTokenVerifier = googleTokenVerifier;
+        this.authProperties = authProperties;
     }
 
     @Override
@@ -56,10 +59,13 @@ public class AuthServiceImpl implements AuthService {
     public AuthResult register(RegisterRequest request, String clientIp) {
         loginRateLimiter.checkAndRecordRegistration(clientIp);
         String email = normalizeEmail(request.getEmail());
+
+        if (!authProperties.isPasswordRegistrationEnabled()) {
+            throw new ForbiddenException("Sign-up with email and password is closed. Please continue with Google.");
+        }
         if (userRepository.existsByEmail(email)) {
             throw new ConflictException("An account with this email already exists");
         }
-
         User user = new User();
         user.setEmail(email);
         user.setName(request.getName().trim());
@@ -147,6 +153,13 @@ public class AuthServiceImpl implements AuthService {
         }
 
         user.setGoogleSub(google.getSubject());
+        // The email was never verified, so whoever set this password may not own it. Google has
+        // just proven who does: remove that password and end every session it opened.
+        // (After setGoogleSub, so the row always has a login method when it is flushed.)
+        if (!user.isEmailVerified() && user.getPasswordHash() != null) {
+            user.setPasswordHash(null);
+            refreshTokenService.revokeAll(user);
+        }
         user.setEmailVerified(true);
         user.setLastLoginAt(Instant.now());
         userRepository.save(user);
